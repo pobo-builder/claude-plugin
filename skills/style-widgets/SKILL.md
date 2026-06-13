@@ -1,0 +1,130 @@
+---
+name: style-widgets
+description: Style Pobo Page Builder widgets to match the design of the user's e-shop. Use when the user wants to restyle, unify, theme, or adjust the look of Pobo Page Builder widgets / product descriptions on their e-shop (Shoptet, Shopify, WooCommerce, PrestaShop, Upgates), or asks to make Pobo Page Builder content match their brand. Uses the `pobo` MCP server tools.
+---
+
+# Style Pobo Page Builder widgets to match the e-shop design
+
+You generate SCSS that makes Pobo Page Builder widgets visually match the user's e-shop, and deploy
+it through the `pobo` MCP server. All logic runs on the Pobo Page Builder backend — your job is to
+read the e-shop's design, write the SCSS, push it, and iterate.
+
+Communicate with the user in their language (typically Czech).
+
+## Prerequisites & auth
+
+The `pobo` MCP server is connected once via a `claude mcp add` command that the user
+copies from the **"Connect Claude"** page in the Pobo Page Builder admin (the token is baked into
+the command). If the `pobo` tools are unavailable, or MCP calls fail with
+**401 / unauthorized**, tell the user:
+
+> Na stránce **„Připojit Claude"** v Pobo Page Builder administraci zkopírujte příkaz `claude mcp add`
+> a spusťte ho v terminálu. Pokud už token máte a přestal platit, vygenerujte si na téže
+> stránce nový a spusťte příkaz znovu (přepíše ten starý).
+
+Never ask the user to paste the token into the conversation, and never write it into
+any file in a repository — it is a per-user secret.
+
+Rate limit is 60 requests/min per token; the normal workflow fits comfortably, so do
+not fire bulk page fetches in tight loops. On 429, wait and retry.
+
+## Workflow
+
+### 1. Pick the e-shop
+
+Call `list_eshop`. If exactly one e-shop is returned, use it. If multiple, ask the
+user which one to style. If none, tell the user to set up their e-shop in Pobo Page Builder first.
+
+### 2. Load the theming contract
+
+Call `get_theming_contract`. It returns:
+
+- `variable` — ~1400 CSS custom properties (`--pobo-widget-*`, `--pobo-global-*`) with
+  their default values. Naming convention: `--pobo-widget-{block}-{property}` with
+  suffixes like `-bg`, `-padding`, `-margin`, `-border-radius`, `-box-shadow`, and
+  `-before-*` / `-after-*` for pseudo-elements.
+- `widget_block` — ~80 native BEM blocks usable as selectors (block `.widget-infobox`,
+  elements like `.widget-infobox__title`).
+- `declared_on` — where the variables are declared (`:root`). **Overrides must also be
+  written on `:root`.**
+
+Keep the variables and blocks relevant to the task in mind; don't dump the full list
+on the user.
+
+### 3. Extract design tokens from the e-shop
+
+Call `fetch_eshop_page` with the `eshop_id` and `path: "/"` for the homepage. Also
+fetch one product detail page — find a product URL path in the homepage HTML, or ask
+the user for one. Pass only the path (starting with `/`); the host is fixed to the
+stored e-shop URL and cannot be changed — never try to work around this.
+
+From the HTML and inline CSS extract the design tokens:
+
+- primary and secondary brand colors
+- font family (and weights if visible)
+- border radius style (sharp / rounded / pill)
+- button style (background, border, radius, hover if discoverable)
+- shadows
+
+Bodies over 500 KB are truncated (look for a `<!-- TRUNCATED: ... -->` marker); work
+with what you get. Summarize the extracted tokens to the user before generating SCSS.
+
+### 4. Generate the SCSS
+
+Rules:
+
+- Prefer overriding `--pobo-*` variables on `:root`. Use targeted styling via
+  `.widget-*` block selectors only when no variable exists for what you need.
+- **Always produce the complete SCSS file.** A push replaces the entire previous
+  content — never generate an incremental diff. When iterating, re-emit everything.
+- **Never generate:** `@import`, `expression(`, `javascript:`, `vbscript:`,
+  `behavior:`, `-moz-binding`, or any external `url(...)` (anything with a scheme or
+  `//host/`). Only relative/local URLs are allowed. The server rejects these (the
+  blacklist also catches CSS-escape obfuscation), so don't produce them in the first
+  place. For fonts, set font-family variables to font names — never `@import` a font.
+- CSS only — no JavaScript assets, no widget/content management (out of scope).
+- Max 256 KB of SCSS.
+
+### 5. Push
+
+Call `push_asset_css` with `eshop_id`, a descriptive `name` shown to the merchant in
+the Pobo Page Builder admin (e.g. "AI sjednocení designu"), and the complete `scss`.
+
+- Each e-shop has at most one AI asset; the push is an idempotent upsert
+  (`action: created | updated`).
+- On `SCSS does not compile: ...` — fix the SCSS and push again.
+- On `Compiled CSS contains forbidden constructs ...` — remove the offending
+  construct and push again.
+- On success, the CSS deploys to the e-shop's CDN bundle (`cdn_url` in the response);
+  propagation takes seconds.
+
+### 6. Verify
+
+Ask the user to look at their e-shop with a hard refresh (Ctrl/Cmd+Shift+R) and give
+feedback. If you have browser tooling available (Claude in Chrome, a browser MCP),
+take a screenshot and compare yourself. Iterate: adjust the SCSS based on feedback and
+push the complete file again.
+
+**Cascade fallback:** if the user reports no visible change even though the push
+succeeded, the `:root` overrides may be losing the cascade against `generic.css` on
+some platforms. Increase specificity — use `:root:root { ... }` for the variable
+overrides, or as a last resort set the properties directly on the `.widget-*` blocks.
+
+### 7. Rollback
+
+If the user wants to revert: call `list_asset` to get the AI asset id, then
+`delete_asset` with `eshop_id` and `asset_id`. The CDN bundle regenerates
+automatically. The user can also delete the asset themselves in the Pobo Page Builder admin.
+Confirm with the user before deleting.
+
+## Error handling
+
+All tools return human-readable MCP errors — read them and react (fix the SCSS, pick
+another e-shop, retry later). Common ones:
+
+- `Eshop not found.` — wrong `eshop_id`; re-run `list_eshop`.
+- `Asset not found.` — the asset id is not an AI asset of that e-shop; re-run `list_asset`.
+- `Page returned HTTP {status}.` / `Page redirected outside the eshop domain` /
+  `Too many redirects.` — try another path or ask the user for a working URL path.
+- `Theming contract is temporarily unavailable ...` — retry shortly.
+- 401 — see Prerequisites & auth above.
