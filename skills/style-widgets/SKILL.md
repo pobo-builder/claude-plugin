@@ -49,7 +49,9 @@ Call `get_theming_contract`. It returns:
   written on `:root`.**
 
 Keep the variables and blocks relevant to the task in mind; don't dump the full list
-on the user.
+on the user. Before styling a widget, filter the contract for its variables
+(everything starting with `--pobo-widget-{block}-`) so you know what is themable —
+this list, not the raw CSS properties, is your styling surface.
 
 ### 3. Extract design tokens from the e-shop
 
@@ -73,8 +75,28 @@ with what you get. Summarize the extracted tokens to the user before generating 
 
 Rules:
 
-- Prefer overriding `--pobo-*` variables on `:root`. Use targeted styling via
-  `.widget-*` block selectors only when no variable exists for what you need.
+- **Variables first — this is the core rule.** For every property you want to change,
+  first look up the matching variable in the contract: `--pobo-global-*` for
+  cross-widget tokens (colors, fonts, radii), then
+  `--pobo-widget-{block}-{property}` for the specific widget (including `-before-*` /
+  `-after-*` pseudo-element variants). Override it on `:root`. Write a direct
+  `.widget-*` rule **only after confirming the contract has no variable** for that
+  exact property — and scope it as narrowly as possible.
+
+  ```scss
+  // BAD — bypasses the contract, fragile against Pobo updates
+  .widget-infobox { background: #f5f0ea; border-radius: 12px; }
+
+  // GOOD — overrides the contract variables
+  :root {
+    --pobo-widget-infobox-bg: #f5f0ea;
+    --pobo-widget-infobox-border-radius: 12px;
+  }
+  ```
+
+- Self-check before every push: each declaration inside a `.widget-*` selector is a
+  smell. Re-check the contract for each one; keep it only if no variable exists, and
+  note in your reply to the user which direct rules you kept and why.
 - **Always produce the complete SCSS file.** A push replaces the entire previous
   content — never generate an incremental diff. When iterating, re-emit everything.
 - **Never generate:** `@import`, `expression(`, `javascript:`, `vbscript:`,
