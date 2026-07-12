@@ -18,21 +18,27 @@ In [Claude Code](https://claude.com/claude-code), run:
 
 ## Connecting your Pobo Page Builder account
 
-In the Pobo Page Builder admin, open the **"Connect Claude"** page and copy the
-ready-made command (it already contains your personal token). Paste it into your
-terminal:
+Run this once in your terminal:
 
 ```
-claude mcp add -s user --transport http pobo https://api.pobo.space/mcp/client \
-    --header "Authorization: Bearer <token>"
+claude mcp add -s user --transport http pobo https://api.pobo.space/mcp/client
 ```
 
-That's it — no environment variables, no config files to edit. The connection persists
-across all your projects. The token is shown only once; if you ever need to reconnect,
-generate a new one on the same page and run the command again (it overwrites the old
-connection).
+Claude Code opens your browser — log in with your Pobo Page Builder account and
+approve access. That's it: no tokens, no environment variables, no config files.
+The connection persists across all your projects; if it ever expires, run `/mcp`
+in Claude Code and re-authenticate.
 
-Never commit the token to any repository — it is a per-user secret.
+### Claude.ai / ChatGPT (web)
+
+The same server works without Claude Code. Add a custom connector with the URL
+`https://api.pobo.space/mcp/client`:
+
+- **Claude.ai**: Settings → Connectors → Add custom connector
+- **ChatGPT**: Settings → Connectors → Create
+
+Leave the OAuth Client ID/Secret fields empty — you will be asked to log in and
+approve access in your browser.
 
 ## Usage
 
@@ -50,8 +56,7 @@ you can remove them at any time.
 - `skills/style-widgets/` — the workflow for AI styling of widgets
 
 The connection to the Pobo Page Builder MCP server is set up by the `claude mcp add`
-command above, not bundled in the plugin (the token is per-user, so it cannot ship in
-a public repo).
+command above (OAuth login in the browser), not bundled in the plugin.
 
 ## About
 
