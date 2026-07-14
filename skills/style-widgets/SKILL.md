@@ -13,19 +13,20 @@ Communicate with the user in their language (typically Czech).
 
 ## Prerequisites & auth
 
-The `pobo` MCP server is connected once via a `claude mcp add` command that the user
-copies from the **"Connect Claude"** page in the Pobo Page Builder admin (the token is baked into
-the command). If the `pobo` tools are unavailable, or MCP calls fail with
-**401 / unauthorized**, tell the user:
+The `pobo` MCP server is connected once via OAuth — the user runs
+`claude mcp add -s user --transport http pobo https://api.pobo.space/mcp/client`
+and logs in with their Pobo Page Builder account in the browser. If the `pobo`
+tools are unavailable, or MCP calls fail with **401 / unauthorized**, tell the user:
 
-> Na stránce **„Připojit Claude"** v Pobo Page Builder administraci zkopírujte příkaz `claude mcp add`
-> a spusťte ho v terminálu. Pokud už token máte a přestal platit, vygenerujte si na téže
-> stránce nový a spusťte příkaz znovu (přepíše ten starý).
+> Připojte Pobo server příkazem
+> `claude mcp add -s user --transport http pobo https://api.pobo.space/mcp/client`
+> a přihlaste se v prohlížeči svým Pobo účtem. Pokud připojení vypršelo, spusťte
+> `/mcp` a přihlaste se znovu.
 
-Never ask the user to paste the token into the conversation, and never write it into
-any file in a repository — it is a per-user secret.
+There are no tokens to handle — authentication is a browser login, never ask the
+user for credentials in the conversation.
 
-Rate limit is 60 requests/min per token; the normal workflow fits comfortably, so do
+Rate limit is 60 requests/min per user; the normal workflow fits comfortably, so do
 not fire bulk page fetches in tight loops. On 429, wait and retry.
 
 ## Workflow
@@ -71,7 +72,22 @@ From the HTML and inline CSS extract the design tokens:
 Bodies over 500 KB are truncated (look for a `<!-- TRUNCATED: ... -->` marker); work
 with what you get. Summarize the extracted tokens to the user before generating SCSS.
 
-### 4. Generate the SCSS
+### 4. Inspect the widget content itself
+
+On the fetched product page, find the Pobo wrapper: `<div id='pobo-all-content'
+data-pobo-content='...' data-pobo-page-id='...'>`. Take those two attribute values
+and call `get_content_html` with them (plus `eshop_id`). It returns:
+
+- the **clean widget HTML** of that page — no shop chrome (menus, footer, cookie
+  bars), so you see the exact markup your CSS will target;
+- `widget_class` in structured content — the inventory of `widget-*` blocks the
+  page actually uses.
+
+**Style only blocks that appear in the inventory** — do not blind-style all ~80
+contract blocks. For a broader picture, repeat on 2-3 representative pages (a
+product, a category) rather than trying to enumerate everything.
+
+### 5. Generate the SCSS
 
 Rules:
 
@@ -107,7 +123,7 @@ Rules:
 - CSS only — no JavaScript assets, no widget/content management (out of scope).
 - Max 256 KB of SCSS.
 
-### 5. Push
+### 6. Push
 
 Call `push_asset_css` with `eshop_id`, a descriptive `name` shown to the merchant in
 the Pobo Page Builder admin (e.g. "AI sjednocení designu"), and the complete `scss`.
@@ -120,19 +136,27 @@ the Pobo Page Builder admin (e.g. "AI sjednocení designu"), and the complete `s
 - On success, the CSS deploys to the e-shop's CDN bundle (`cdn_url` in the response);
   propagation takes seconds.
 
-### 6. Verify
+### 7. Verify — see the result yourself
 
-Ask the user to look at their e-shop with a hard refresh (Ctrl/Cmd+Shift+R) and give
-feedback. If you have browser tooling available (Claude in Chrome, a browser MCP),
-take a screenshot and compare yourself. Iterate: adjust the SCSS based on feedback and
-push the complete file again.
+Call `screenshot_eshop_page` with the `eshop_id`, the product page `path` and
+`selector: "#pobo-all-content"` — you get a real-browser screenshot of exactly the
+widget area you just styled (the CSS propagates to the CDN in seconds). Compare it
+against the design tokens from step 3 and iterate: adjust the SCSS, push the
+complete file again, screenshot again.
+
+- Also check `viewport: "mobile"` (rendered at 2× scale, retina-sharp) — spacing
+  and typography issues often show up only on small screens.
+- The tool also returns a public CDN URL of the screenshot — share it with the
+  user so they can see what you see.
+- Finish by asking the user to confirm on their live e-shop (hard refresh,
+  Ctrl/Cmd+Shift+R).
 
 **Cascade fallback:** if the user reports no visible change even though the push
 succeeded, the `:root` overrides may be losing the cascade against `generic.css` on
 some platforms. Increase specificity — use `:root:root { ... }` for the variable
 overrides, or as a last resort set the properties directly on the `.widget-*` blocks.
 
-### 7. Rollback
+### 8. Rollback
 
 If the user wants to revert: call `list_asset` to get the AI asset id, then
 `delete_asset` with `eshop_id` and `asset_id`. The CDN bundle regenerates
@@ -149,4 +173,9 @@ another e-shop, retry later). Common ones:
 - `Page returned HTTP {status}.` / `Page redirected outside the eshop domain` /
   `Too many redirects.` — try another path or ask the user for a working URL path.
 - `Theming contract is temporarily unavailable ...` — retry shortly.
+- `Content not found.` — wrong `page_id`/`content` pair or the page does not belong
+  to this e-shop; re-read the data attributes from `fetch_eshop_page`.
+- `Screenshot failed: ...` / `Screenshot service is not configured.` — verification
+  screenshots are unavailable; fall back to asking the user to check with a hard
+  refresh, do not block the workflow on it.
 - 401 — see Prerequisites & auth above.

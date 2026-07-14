@@ -1,7 +1,7 @@
 {
     "name": "pobo",
     "description": "AI styling of Pobo Page Builder widgets — extracts design tokens from your e-shop and deploys matching CSS through the Pobo MCP server.",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "author": {
         "name": "Tomáš Smetka <tomas@pobo.cz>",
         "url": "https://www.pobo.space"
