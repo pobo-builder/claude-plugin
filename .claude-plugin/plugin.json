@@ -1,12 +1,12 @@
 {
     "name": "pobo",
-    "description": "AI styling of Pobo Page Builder widgets — extracts design tokens from your e-shop and deploys matching CSS through the Pobo MCP server.",
-    "version": "0.3.0",
+    "description": "Pobo Page Builder tools for Claude — AI styling of widgets to match your e-shop design, and product labeling from client-supplied lists (EANs, codes, URLs, names) through the Pobo MCP server.",
+    "version": "0.4.0",
     "author": {
         "name": "Tomáš Smetka <tomas@pobo.cz>",
         "url": "https://www.pobo.space"
     },
     "homepage": "https://github.com/pobo-builder/claude-plugin",
     "repository": "https://github.com/pobo-builder/claude-plugin",
-    "keywords": ["pobo", "styling", "css", "scss", "widgets", "eshop", "shoptet"]
+    "keywords": ["pobo", "styling", "css", "scss", "widgets", "eshop", "shoptet", "labels", "products"]
 }
