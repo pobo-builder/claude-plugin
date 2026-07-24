@@ -115,3 +115,5 @@ All tools return human-readable MCP errors — read them and react. Common ones:
 - Creating or editing products/content — labeling only.
 - Deleting labels (the admin UI covers that).
 - Styling — that is the `style-widgets` skill.
+- Setting up the generation prompt for the labeled batch — that is the
+  `manage-prompts` skill (a natural next step once the batch is labeled).

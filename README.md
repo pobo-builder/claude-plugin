@@ -9,6 +9,9 @@ your machine, all logic lives on the backend:
 - **Product labeling** — Claude takes a product list in any shape (EANs, product
   codes, URLs, or names — e.g. an xlsx from a client), resolves it to Pobo
   products, and labels them so you can filter the batch in the Pobo admin grid.
+- **Prompt management** — Claude creates and edits the AI generation prompt
+  profiles Pobo uses for product descriptions, and decomposes a client's brief
+  into precise per-widget instructions on your design template.
 
 Supported platforms: Shoptet, Shopify, WooCommerce, PrestaShop, Upgates.
 
@@ -65,10 +68,21 @@ Claude resolves the products (URLs, EANs, codes, or names), creates the label, a
 attaches it — ambiguous or unmatched items are reported back instead of guessed.
 The labeled batch is then filterable in the Pobo Page Builder admin product grid.
 
+Or refine your generation prompts:
+
+> Here is the client's brief — set up a generation prompt on the "Elektro"
+> template: mention the stainless steel construction in the first section and
+> add a sizing FAQ.
+
+Claude creates (or updates) the prompt profile, links the design template, and
+pins each requirement to the right widget as an explicit per-widget instruction.
+You then run the generation itself from the Pobo Page Builder admin as usual.
+
 ## What's in the plugin
 
 - `skills/style-widgets/` — the workflow for AI styling of widgets
 - `skills/label-products/` — the workflow for labeling products from a client-supplied list
+- `skills/manage-prompts/` — the workflow for managing AI generation prompt profiles
 
 The connection to the Pobo Page Builder MCP server is set up by the `claude mcp add`
 command above (OAuth login in the browser), not bundled in the plugin.
