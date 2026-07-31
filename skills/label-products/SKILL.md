@@ -90,7 +90,8 @@ Summarize for the user:
 - the `not_found` identifiers — ask the user to fix or complete those inputs
   (typo in URL, product not imported into Pobo yet, …),
 - that the batch is now filterable by this label in the Pobo Page Builder admin
-  product grid.
+  product grid — and by you via `list_product` (`label_id` + grid filters like
+  `waiting_for_approval`; see the `confirm-products` skill for the full list).
 
 ### Rollback
 
@@ -117,3 +118,5 @@ All tools return human-readable MCP errors — read them and react. Common ones:
 - Styling — that is the `style-widgets` skill.
 - Setting up the generation prompt for the labeled batch — that is the
   `manage-prompts` skill (a natural next step once the batch is labeled).
+- Switching product status (draft ⇄ ready) after the content is approved —
+  that is the `confirm-products` skill.

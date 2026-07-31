@@ -12,6 +12,9 @@ your machine, all logic lives on the backend:
 - **Prompt management** — Claude creates and edits the AI generation prompt
   profiles Pobo uses for product descriptions, and decomposes a client's brief
   into precise per-widget instructions on your design template.
+- **Product confirmation** — Claude switches a batch of products between
+  `draft` (waiting for approval) and `ready` (approved for export) once the
+  client signs off the new content.
 
 Supported platforms: Shoptet, Shopify, WooCommerce, PrestaShop, Upgates.
 
@@ -78,11 +81,37 @@ Claude creates (or updates) the prompt profile, links the design template, and
 pins each requirement to the right widget as an explicit per-widget instruction.
 You then run the generation itself from the Pobo Page Builder admin as usual.
 
+Or confirm a finished batch:
+
+> The client approved the new descriptions — mark the "Sportrec úprava 07/2026"
+> batch as ready for export.
+
+Claude switches the products from `draft` to `ready` (or back to `draft` when
+content returns for rework). Only these two statuses are ever touched — products
+currently in review or AI generation are reported and skipped, never overridden.
+
+### Filtering products
+
+Claude can filter products with the same filters as the Pobo Page Builder admin
+product grid: **label**, **grid tabs** (all / without description / edited in
+Pobo / favourites / waiting for approval), **full-text search**, **category**,
+**brand** and **visibility**, plus ordering by recent edits, page views, or
+add-to-cart stats. Categories are searchable by name the same way, so "drafts
+in the Massage category" needs no ids from you. So requests like
+
+> Switch everything with the "Sportrec úprava 07/2026" label that waits for
+> approval to ready.
+
+work without pasting any product list — Claude filters the batch itself and
+confirms the count with you before switching. The same filters are available in
+the admin grid, so you can verify the result visually.
+
 ## What's in the plugin
 
 - `skills/style-widgets/` — the workflow for AI styling of widgets
 - `skills/label-products/` — the workflow for labeling products from a client-supplied list
 - `skills/manage-prompts/` — the workflow for managing AI generation prompt profiles
+- `skills/confirm-products/` — the workflow for switching product status (draft ⇄ ready)
 
 The connection to the Pobo Page Builder MCP server is set up by the `claude mcp add`
 command above (OAuth login in the browser), not bundled in the plugin.
