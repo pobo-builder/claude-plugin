@@ -42,6 +42,9 @@ There are no tokens to handle — never ask the user for credentials.
   appeared on the live page. Everything "before/after" pivots on this date.
 - **before_after_summary** — average daily views/add-to-cart and the
   add-to-cart rate before vs. after the description, with percent changes.
+  Both sides cover a symmetric window (N days right before × first N days
+  after detection, N = shorter side) so seasonality of a longer "before"
+  stretch cannot skew the averages — `before.days` always equals `after.days`.
   `before: null` means the product has no history before the description
   (new product) — say so, do not invent a comparison.
 - **engagement** — scroll depth funnel (share of views reaching 25/50/75/100 %
