@@ -1,6 +1,6 @@
 ---
 name: manage-prompts
-description: Manage AI generation prompt profiles for Pobo Page Builder product descriptions. Use when the user wants to create, edit, review, or organize the prompts (zadání) Pobo uses to generate product content — including per-widget instructions that pin specific requirements to specific widgets of a design template. Typical asks: "nastav prompt pro generování", "uprav zadání popisků", "rozepiš požadavky klienta do promptu", "co je v našem promptu". Uses the `pobo` MCP server tools.
+description: Manage and test AI generation prompt profiles for Pobo Page Builder product descriptions. Use when the user wants to create, edit, review, try out, or organize the prompts (zadání) Pobo uses to generate product content — including per-widget instructions that pin specific requirements to specific widgets of a design template, and free dry-run previews against real products before a prompt is saved. Typical asks: "nastav prompt pro generování", "uprav zadání popisků", "vyzkoušej ten prompt", "rozepiš požadavky klienta do promptu", "co je v našem promptu". Uses the `pobo` MCP server tools.
 ---
 
 # Manage Pobo Page Builder AI generation prompts
@@ -96,7 +96,32 @@ Typical use: the client's brief says "mention the stainless steel construction,
 add a sizing FAQ, and keep benefits under 5 words" — map each requirement onto
 the matching widget of the design and write one focused instruction per widget.
 
-### 5. Report
+### 5. Test the prompt before you save it
+
+`preview_generation` dry-runs the prompt against 1–3 real products **without
+writing anything and without spending credits** — no widgets, no images, no
+generation history row. This is how you find out whether an edit actually
+produced better copy; guessing from the prompt text alone does not.
+
+- Pass `eshop_id`, `design_id`, `product_id` (1–3, from `find_product` or
+  `list_product`) and the `prompt` text you are testing. Optional generation
+  settings mirror the admin: `paragraph_length`, `generate_seo_meta`,
+  `generate_entity_name`, `use_ai_profile`, `use_serp_context`,
+  `use_web_research`, `search_web`, `search_model`.
+- It returns one token per product. Poll them with `get_preview_status` —
+  status `pending` until the queue picks the job up, then `complete` with the
+  rendered `html` and any generated SEO fields. Tokens expire after 30 minutes.
+- Poll at a sensible pace: a preview runs the full research + generation
+  pipeline, so it takes tens of seconds, not one.
+- Pick products that actually exercise the prompt — if the brief is about
+  material and sizing, preview a product that has both.
+
+Loop prompt → preview → prompt as many times as it takes, and call
+`update_prompt` / `set_widget_prompt` only once the output is right. Note that
+`preview_generation` takes the prompt as text, so you can test an edit that is
+not saved anywhere yet.
+
+### 6. Report
 
 Summarize for the user:
 
@@ -104,9 +129,11 @@ Summarize for the user:
   "5 z 8 widgetů má explicitní instrukci"),
 - if the prompt text was overwritten, note that previous versions remain
   available in the history,
-- that generation itself is started in the Pobo Page Builder admin (product
-  grid → select products → pick this profile) — there is no MCP tool for
-  triggering generation yet.
+- what the preview looked like, if you ran one (previews cost nothing, so
+  there is no reason to report them as an expense),
+- that the real generation is started in the Pobo Page Builder admin (product
+  grid → select products → pick this profile) — previewing is available here,
+  triggering the real run deliberately is not.
 
 ### Rollback
 
@@ -132,11 +159,26 @@ All tools return human-readable MCP errors — read them and react. Common ones:
 - Validation error on `widget_prompt.*.design_widget_id` — the widget belongs
   to a different design; re-check with `list_design_widget`.
 - `Nothing to update…` — `update_prompt` needs at least one field to change.
+- `AI content generation is temporarily unavailable. Try again later.` —
+  Pobo has AI generation switched off (outage or maintenance). Previews are
+  blocked for everyone; prompt edits still work. Tell the user to try the
+  preview later rather than retrying in a loop.
+- `Design does not belong to this eshop.` — preview needs a design the e-shop
+  can use; re-run `list_design`.
+- `Product does not belong to this eshop.` — comes back per product inside an
+  otherwise successful preview call, not as a whole-call error; the other
+  products still queued.
+- `not_found` from `get_preview_status` — the token expired (30 min), never
+  existed, or belongs to a different e-shop. Re-run `preview_generation`.
 - 401 — see Prerequisites & auth above.
 
 ## Out of scope
 
-- Triggering or previewing generation — that happens in the Pobo admin.
+- Triggering the real generation — previews are here, the real run is started
+  in the Pobo admin. That is deliberate: unlike a preview it spends credits and
+  overwrites live content.
+- Checking credits before a preview — previews are free. (`get_credit` exists
+  for the paid tools, e.g. blog generation.)
 - Generation settings other than name/prompt/design/icon category (section
   counts, image flow, translations, …) — managed in the Pobo admin UI.
 - Pobo gallery prompt templates — read-only, not accessible here.

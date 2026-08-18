@@ -79,7 +79,10 @@ Or refine your generation prompts:
 
 Claude creates (or updates) the prompt profile, links the design template, and
 pins each requirement to the right widget as an explicit per-widget instruction.
-You then run the generation itself from the Pobo Page Builder admin as usual.
+Before saving, it can dry-run the prompt against a couple of real products and
+show you the rendered result — that costs nothing and writes nothing, so you can
+iterate until the copy is right. You then run the real generation from the Pobo
+Page Builder admin as usual.
 
 Or confirm a finished batch:
 
@@ -89,6 +92,26 @@ Or confirm a finished batch:
 Claude switches the products from `draft` to `ready` (or back to `draft` when
 content returns for rework). Only these two statuses are ever touched — products
 currently in review or AI generation are reported and skipped, never overridden.
+
+Or ask why a description came out wrong:
+
+> V popisku toho krmiva chybí dávkování, přitom je na stránce výrobce. Proč?
+
+Claude works through the three places it can fail — was it in the instruction,
+did the web research find it, and did the content get exported — and tells you
+which one it was. That matters, because "nobody asked for it" and "the research
+never found it" need completely different fixes, and one of them is not yours.
+
+Or have Claude write a blog article:
+
+> Napiš článek o výběru zimních pneumatik, tak na tři normostrany, a vlož do něj
+> naše čtyři nejprodávanější modely.
+
+Claude composes the article itself from your widget templates — free, no credits
+— places real products as a carousel rather than writing their names into prose,
+and runs a quality check for empty slots at the end. Pobo's own server-side
+generator is available too when you want it; Claude always says up front which
+one it is using and what it costs.
 
 ### Filtering products
 
@@ -109,9 +132,12 @@ the admin grid, so you can verify the result visually.
 ## What's in the plugin
 
 - `skills/style-widgets/` — the workflow for AI styling of widgets
+- `skills/write-blog/` — the workflow for authoring and editing blog articles
 - `skills/label-products/` — the workflow for labeling products from a client-supplied list
-- `skills/manage-prompts/` — the workflow for managing AI generation prompt profiles
 - `skills/confirm-products/` — the workflow for switching product status (draft ⇄ ready)
+- `skills/manage-prompts/` — the workflow for managing and dry-run testing AI generation prompt profiles
+- `skills/diagnose-content/` — the workflow for finding out why a generated description is missing something
+- `skills/product-analytics/` — the workflow for reading how a description performs after it went live
 
 The connection to the Pobo Page Builder MCP server is set up by the `claude mcp add`
 command above (OAuth login in the browser), not bundled in the plugin.
